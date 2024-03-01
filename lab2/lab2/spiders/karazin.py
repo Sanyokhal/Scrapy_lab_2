@@ -1,5 +1,6 @@
 import scrapy
 from bs4 import BeautifulSoup
+from lab2.items import Faculty, Kafedra, DetailedKafedra
 
 
 class KarazinSpider(scrapy.Spider):
@@ -9,4 +10,61 @@ class KarazinSpider(scrapy.Spider):
 
     def parse(self, response):
         soup = BeautifulSoup(response.body, "html.parser")
-        faculties = soup.find('ul', {'class': 'specialitys'}).find_all('a', {'class': 'flex-item'})
+        faculties_list = soup.find('ul', {'class': 'specialitys'}).find_all('a', {'class': 'flex-item'})
+        for faculty in faculties_list:
+            link = f"https://start.karazin.ua{faculty['href']}"
+            faculty_name = faculty.find('div', {'class': 'text'}).text.replace(' ', ' ')
+            yield Faculty(
+                name=faculty_name,
+                url=link
+            )
+            yield scrapy.Request(
+                url=link,
+                callback=self.parse_faculty,
+                meta={
+                    "faculty": faculty_name
+                }
+            )
+
+    def parse_faculty(self, response):
+        soup = BeautifulSoup(response.body, "html.parser")
+        rows = soup.find('tbody', {'class': 'table-body'}).find_all('tr', {'class': 'row'})
+        for row in rows:
+            speciality = row.find('td', {'class': 'cell title'}).find('div', {'class': 'spec--title'}).text.split(': ')[
+                1]
+            url = row.find('td', {'class': 'cell title'}).find('a', {'class': 'program--link'})['href']
+            url = f"https://start.karazin.ua{url}"
+            name = row.find('td', {'class': 'cell title'}).find('a', {'class': 'program--link'}).text
+            yield Kafedra(
+                name=f"Кафедра | {name.capitalize()}",
+                url=url,
+                faculty=response.meta.get("faculty"),
+                speciality=speciality
+            )
+            yield scrapy.Request(
+                url=url,
+                callback=self.parse_kafedra,
+                meta={
+                    "kafedra": name.capitalize()
+                }
+            )
+
+    def parse_kafedra(self, response):
+        soup = BeautifulSoup(response.body, "html.parser")
+        form = soup.find('div', {'class': 'training-program-container'}).find('div',
+                                                                              {'class': 'stats table-cell'}).find(
+            'label', {'class': 'pointer'}).text
+        training_program = soup.find('div', {'class': 'training-program-container'})
+        points = 'Не вказано'
+        if training_program is not None:
+            values = training_program.find('div', {'id': 'education-form--container-1'}).find_all('div',
+                                                                                                  {'class': 'value'})
+            for value in values:
+                if 'ECTS' in value.text:
+                    points = value.text
+
+        yield DetailedKafedra(
+            name=f"Детальна інформація по факультету | {response.meta.get('kafedra')}",
+            learn_form=form,
+            ects_credits=points
+        )

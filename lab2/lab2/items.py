@@ -6,7 +6,19 @@
 import scrapy
 
 
-class Lab2Item(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+class Faculty(scrapy.Item):
+    name = scrapy.Field()
+    url = scrapy.Field()
+
+
+class Kafedra(scrapy.Item):
+    name = scrapy.Field()
+    url = scrapy.Field()
+    faculty = scrapy.Field()
+    speciality = scrapy.Field()
+
+
+class DetailedKafedra(scrapy.Item):
+    name = scrapy.Field()
+    learn_form = scrapy.Field()
+    ects_credits = scrapy.Field()
