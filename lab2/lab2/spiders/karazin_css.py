@@ -9,11 +9,10 @@ class KarazinSpider(scrapy.Spider):
     start_urls = ["https://start.karazin.ua/programs"]
 
     def parse(self, response):
-        faculties_list = response.css('ul.specialitys').css('a.flex-item')
-        print(faculties_list)
+        faculties_list = response.css('ul.specialitys')[0].css('a.flex-item')
         for faculty in faculties_list:
             link = ''
-            faculty_name = faculty.css('div.text').text.replace(' ', ' ')
+            faculty_name = faculty.css('div.text')[0].text.replace(' ', ' ')
             print(faculty_name)
             yield Faculty(
                 name=faculty_name,
